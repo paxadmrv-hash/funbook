@@ -34,6 +34,9 @@ function getUsuarios(): Array<{ email: string; hash: string; nome: string }> {
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
+  // Logs detalhados nos logs da Vercel para diagnóstico
+  debug: true,
+
   providers: [
     CredentialsProvider({
       name: "Pax Rio Verde",
@@ -42,18 +45,30 @@ export const authOptions: NextAuthOptions = {
         senha: { label: "Senha",   type: "password",  placeholder: "••••••••" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.senha) return null;
+        if (!credentials?.email || !credentials?.senha) {
+          console.warn("[auth] Credenciais ausentes");
+          return null;
+        }
 
         const usuarios = getUsuarios();
+        console.log(`[auth] Tentativa de login: ${credentials.email} | usuários cadastrados: ${usuarios.length}`);
+
         const usuario = usuarios.find(
           (u) => u.email.toLowerCase() === credentials.email.toLowerCase()
         );
 
-        if (!usuario) return null;
+        if (!usuario) {
+          console.warn(`[auth] Usuário não encontrado: ${credentials.email}`);
+          return null;
+        }
 
         const senhaCorreta = await bcrypt.compare(credentials.senha, usuario.hash);
-        if (!senhaCorreta) return null;
+        if (!senhaCorreta) {
+          console.warn(`[auth] Senha incorreta para: ${credentials.email}`);
+          return null;
+        }
 
+        console.log(`[auth] ✓ Login bem-sucedido: ${credentials.email}`);
         return { id: usuario.email, email: usuario.email, name: usuario.nome };
       },
     }),

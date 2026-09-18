@@ -12,9 +12,15 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function proxy(request: NextRequest) {
+  // Em produção (HTTPS) o NextAuth usa cookie com prefixo __Secure-.
+  // Precisamos informar isso ao getToken, senão ele não encontra a sessão
+  // e cria um loop de redirecionamento para /login.
+  const isSecure = request.nextUrl.protocol === "https:";
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: isSecure,
   });
 
   // Sem sessão → redireciona para login

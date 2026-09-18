@@ -26,16 +26,24 @@ export async function GET(req: NextRequest) {
   const isDev  = process.env.NODE_ENV === "development";
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.get("authorization");
-  const force  = req.nextUrl.searchParams.get("force") === "true";
 
-  // Em produção exige o token. Em dev com ?force=true, libera.
-  if (!isDev || !force) {
-    if (!secret || auth !== `Bearer ${secret}`) {
-      return NextResponse.json(
-        { erro: "Não autorizado. Use: Authorization: Bearer <CRON_SECRET>" },
-        { status: 401 }
-      );
-    }
+  // Aceita o secret via header Authorization OU via query ?secret= (facilita teste no browser)
+  const secretQuery = req.nextUrl.searchParams.get("secret");
+  const force       = req.nextUrl.searchParams.get("force") === "true";
+
+  const autorizado =
+    (secret && auth === `Bearer ${secret}`) ||
+    (secret && secretQuery === secret) ||
+    isDev;
+
+  if (!autorizado) {
+    return NextResponse.json(
+      {
+        erro: "Não autorizado.",
+        dica: "Use header 'Authorization: Bearer <CRON_SECRET>' ou o parâmetro ?secret=<CRON_SECRET>",
+      },
+      { status: 401 }
+    );
   }
 
   const inicio = Date.now();

@@ -59,6 +59,8 @@ export async function sendWhatsAppTemplate(
     ],
   };
 
+  console.log(`[Zenvia] Enviando payload: ${JSON.stringify(payload)}`);
+
   try {
     const response = await axios.post(ZENVIA_BASE_URL, payload, {
       headers: {
@@ -70,8 +72,10 @@ export async function sendWhatsAppTemplate(
 
     const zenviaId: string = response.data?.id ?? `zenvia_${Date.now()}`;
 
+    // Log completo da resposta para diagnóstico de entrega
     console.log(
-      `[Zenvia] ✓ Enviado | to=${to} | id=${zenviaId}`
+      `[Zenvia] Resposta HTTP ${response.status} | to=${to} | ` +
+      `id=${zenviaId} | body=${JSON.stringify(response.data)}`
     );
 
     return { zenviaId };

@@ -1,0 +1,43 @@
+// Prisma Schema — FunBook
+// Banco: PostgreSQL
+// Para aplicar: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Status possíveis do envio
+enum StatusEnvio {
+  PENDENTE
+  REENVIANDO
+  ENVIADO
+  FALHA
+}
+
+model ScheduledMessage {
+  id           String      @id @default(uuid()) @db.Uuid
+  nomeFamiliar String      @map("nome_familiar") @db.VarChar(150)
+  telefone     String      @db.VarChar(20)       // E.164: +5511999999999
+  urlPdf       String      @map("url_pdf")       // URL pública no Cloud Storage
+  storageKey   String      @map("storage_key")   // caminho interno no bucket
+  dataEvento   DateTime    @map("data_evento")   @db.Date
+  dataEnvio    DateTime    @map("data_envio")    @db.Date  // data_evento + 7 dias
+  statusEnvio  StatusEnvio @default(PENDENTE)    @map("status_envio")
+  tentativas   Int         @default(0)
+  ultimoErro   String?     @map("ultimo_erro")   // mensagem de erro da última tentativa
+  zenviaId     String?     @map("zenvia_msg_id") @db.VarChar(100) // ID retornado pela Zenvia
+  criadoEm     DateTime    @default(now())       @map("criado_em")
+  atualizadoEm DateTime    @updatedAt            @map("atualizado_em")
+
+  // Índice composto para a query diária do cron job
+  @@index([dataEnvio, statusEnvio], name: "idx_data_envio_status")
+  // Índice para o dashboard (ordenação por data de criação)
+  @@index([criadoEm(sort: Desc)], name: "idx_criado_em")
+
+  @@map("scheduled_messages")
+}

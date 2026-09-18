@@ -82,9 +82,8 @@ const tdStyle: CSSProperties = {
 export function DashboardTable() {
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [paginacao, setPaginacao] = useState<Paginacao | null>(null);
-  const [dataFiltro, setDataFiltro] = useState<string>(
-    new Date().toISOString().slice(0, 10)
-  );
+  // Vazio por padrão = mostra TODOS os registros (não filtra por data)
+  const [dataFiltro, setDataFiltro] = useState<string>("");
   const [statusFiltro, setStatusFiltro] = useState<StatusEnvio | "">("");
   const [page, setPage] = useState(1);
   const [carregando, setCarregando] = useState(false);
@@ -160,7 +159,7 @@ export function DashboardTable() {
             color: "var(--text-secondary)", textTransform: "uppercase",
             letterSpacing: ".06em", marginBottom: 5,
           }}>
-            Data de Envio
+            Data de Envio <span style={{ fontWeight: 400, textTransform: "none" }}>(vazio = todas)</span>
           </label>
           <input
             id="filtro-data"
@@ -218,6 +217,25 @@ export function DashboardTable() {
           )}
           Atualizar
         </button>
+
+        {/* Limpar filtros — só aparece quando há algum filtro ativo */}
+        {(dataFiltro || statusFiltro) && (
+          <button
+            onClick={() => { setDataFiltro(""); setStatusFiltro(""); setPage(1); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: "var(--radius-md)",
+              borderWidth: 1, borderStyle: "solid", borderColor: "var(--border-default)",
+              backgroundColor: "#fff", color: "var(--text-secondary)",
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              transition: "background .15s", fontFamily: "inherit",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--brand-50)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff"; }}
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {/* ── Erro global ─────────────────────────────────────── */}

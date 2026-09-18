@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 /* Cards de resumo — layout estático; os números serão alimentados
    pelo client component via JS quando a integração real estiver ativa. */
 const SUMMARY_CARDS = [
-  { label: "Pendentes hoje",  key: "pendente", bg: "var(--warning-bg)",  border: "var(--warning-border)",  textLabel: "var(--warning-text)",  textValue: "#92400e" },
-  { label: "Enviados hoje",   key: "enviado",  bg: "var(--success-bg)",  border: "var(--success-border)",  textLabel: "var(--success-text)",  textValue: "var(--brand-800)" },
-  { label: "Com falha",       key: "falha",    bg: "var(--error-bg)",    border: "var(--error-border)",    textLabel: "var(--error-text)",    textValue: "#7a1e1e" },
-  { label: "Total do dia",    key: "total",    bg: "var(--brand-50)",    border: "var(--brand-200)",       textLabel: "var(--brand-600)",     textValue: "var(--brand-800)" },
+  { label: "Pendentes",  key: "pendente", bg: "var(--warning-bg)",  border: "var(--warning-border)",  textLabel: "var(--warning-text)",  textValue: "#92400e" },
+  { label: "Enviados",   key: "enviado",  bg: "var(--success-bg)",  border: "var(--success-border)",  textLabel: "var(--success-text)",  textValue: "var(--brand-800)" },
+  { label: "Com falha",  key: "falha",    bg: "var(--error-bg)",    border: "var(--error-border)",    textLabel: "var(--error-text)",    textValue: "#7a1e1e" },
+  { label: "Total",      key: "total",    bg: "var(--brand-50)",    border: "var(--brand-200)",       textLabel: "var(--brand-600)",     textValue: "var(--brand-800)" },
 ] as const;
 
 export default function DashboardPage() {

@@ -40,8 +40,9 @@ export async function uploadPdf(
     .replace(/[^a-zA-Z0-9_-]/g, "_") // remove caracteres inválidos
     .slice(0, 60);                     // limita o tamanho do nome
 
-  // public_id único para evitar sobrescrever arquivos
-  const publicId = `livros_homenagem/${baseName}_${randomUUID().slice(0, 8)}`;
+  // O public_id INCLUI a extensão .pdf — assim a URL pública termina em .pdf
+  // e o WhatsApp reconhece o documento como PDF (e não como arquivo .bin).
+  const publicId = `livros_homenagem/${baseName}_${randomUUID().slice(0, 8)}.pdf`;
 
   const resultado = await new Promise<{ secure_url: string; public_id: string }>(
     (resolve, reject) => {
@@ -49,7 +50,6 @@ export async function uploadPdf(
         {
           public_id: publicId,
           resource_type: "raw",   // "raw" = qualquer arquivo não-imagem (PDF, DOCX, etc.)
-          folder: undefined,      // pasta já está no public_id
           overwrite: false,
           tags: ["livro_homenagem", "pax_rio_verde"],
         },

@@ -1,20 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DashboardTable } from "@/components/DashboardTable";
+import { DashboardStats } from "@/components/DashboardStats";
 
 export const metadata: Metadata = {
   title: "Dashboard — Pax Rio Verde",
   description: "Acompanhe os envios agendados e o status de cada mensagem.",
 };
-
-/* Cards de resumo — layout estático; os números serão alimentados
-   pelo client component via JS quando a integração real estiver ativa. */
-const SUMMARY_CARDS = [
-  { label: "Pendentes",  key: "pendente", bg: "var(--warning-bg)",  border: "var(--warning-border)",  textLabel: "var(--warning-text)",  textValue: "#92400e" },
-  { label: "Enviados",   key: "enviado",  bg: "var(--success-bg)",  border: "var(--success-border)",  textLabel: "var(--success-text)",  textValue: "var(--brand-800)" },
-  { label: "Com falha",  key: "falha",    bg: "var(--error-bg)",    border: "var(--error-border)",    textLabel: "var(--error-text)",    textValue: "#7a1e1e" },
-  { label: "Total",      key: "total",    bg: "var(--brand-50)",    border: "var(--brand-200)",       textLabel: "var(--brand-600)",     textValue: "var(--brand-800)" },
-] as const;
 
 export default function DashboardPage() {
   return (
@@ -76,46 +68,8 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* ── Cards de resumo ───────────────────────────────── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 16,
-          marginBottom: 28,
-        }}>
-          {SUMMARY_CARDS.map(({ label, key, bg, border, textLabel, textValue }) => (
-            <div
-              key={key}
-              style={{
-                backgroundColor: bg,
-                border: `1px solid ${border}`,
-                borderRadius: "var(--radius-xl)",
-                padding: "18px 22px",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <p style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: textLabel,
-                textTransform: "uppercase",
-                letterSpacing: ".07em",
-                marginBottom: 8,
-              }}>
-                {label}
-              </p>
-              <p style={{
-                fontSize: 32,
-                fontWeight: 800,
-                color: textValue,
-                lineHeight: 1,
-                fontVariantNumeric: "tabular-nums",
-              }}>
-                —
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* ── Cards de resumo (dados reais do banco) ────────── */}
+        <DashboardStats />
 
         {/* ── Divider com título de seção ───────────────────── */}
         <div style={{

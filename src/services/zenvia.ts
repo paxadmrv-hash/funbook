@@ -40,10 +40,15 @@ export interface SendTemplateResult {
 export async function sendWhatsAppTemplate(
   params: SendTemplateParams
 ): Promise<SendTemplateResult> {
-  const { telefone, urlPdf } = params;
+  const { telefone, urlPdf, nomeFamiliar, dataEvento } = params;
 
   // Garante formato sem + (Zenvia usa DDI+DDD+número sem caracteres especiais)
   const to = telefone.replace(/^\+/, "");
+
+  // Data da cerimônia formatada em pt-BR (variável {{2}} do template)
+  const dataFormatada = new Date(dataEvento).toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  });
 
   const payload = {
     from: process.env.ZENVIA_FROM,
@@ -53,7 +58,11 @@ export async function sendWhatsAppTemplate(
         type:       "template",
         templateId: process.env.ZENVIA_TEMPLATE_ID,
         fields: {
+          // Header: documento PDF
           documentUrl: urlPdf,
+          // Corpo do template: {{1}} = nome do familiar, {{2}} = data da cerimônia
+          "1": nomeFamiliar,
+          "2": dataFormatada,
         },
       },
     ],
@@ -107,6 +116,9 @@ export async function sendWhatsAppTemplate(
  */
 export function buildZenviaPayload(params: SendTemplateParams) {
   const to = params.telefone.replace(/^\+/, "");
+  const dataFormatada = new Date(params.dataEvento).toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  });
   return {
     from: process.env.ZENVIA_FROM,
     to,
@@ -116,6 +128,8 @@ export function buildZenviaPayload(params: SendTemplateParams) {
         templateId: process.env.ZENVIA_TEMPLATE_ID,
         fields: {
           documentUrl: params.urlPdf,
+          "1": params.nomeFamiliar,
+          "2": dataFormatada,
         },
       },
     ],

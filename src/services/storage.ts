@@ -50,6 +50,8 @@ export async function uploadPdf(
         {
           public_id: publicId,
           resource_type: "raw",   // "raw" = qualquer arquivo não-imagem (PDF, DOCX, etc.)
+          type: "upload",         // entrega pública (não "authenticated"/"private")
+          access_mode: "public",  // garante acesso público mesmo se a conta restringe por padrão
           overwrite: false,
           tags: ["livro_homenagem", "pax_rio_verde"],
         },

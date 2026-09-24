@@ -38,6 +38,7 @@ export const config = {
     "/upload",
     "/dashboard",
     "/api/uploads",
+    "/api/uploads/:path*",
     "/api/dashboard/:path*",
     "/api/reenviar/:path*",
   ],

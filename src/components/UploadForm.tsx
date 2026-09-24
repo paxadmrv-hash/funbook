@@ -54,12 +54,79 @@ export function UploadForm() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    const formEl = e.currentTarget;
+    const formData = new FormData(formEl);
+
+    const pdf = formData.get("pdf") as File | null;
+    const nome = (formData.get("nome") as string | null)?.trim() ?? "";
+    const telefone = (formData.get("telefone") as string | null)?.trim() ?? "";
+    const dataEvento = (formData.get("dataEvento") as string | null)?.trim() ?? "";
+
+    // ── Validação no cliente (antes de qualquer requisição) ──────────────
+    const errosLocais: string[] = [];
+    if (!pdf || pdf.size === 0) errosLocais.push("Selecione um arquivo PDF.");
+    if (pdf && pdf.type !== "application/pdf")
+      errosLocais.push("O arquivo deve ser um PDF.");
+    if (pdf && pdf.size > 30 * 1024 * 1024)
+      errosLocais.push("O PDF não pode ultrapassar 30 MB.");
+    if (errosLocais.length > 0) {
+      setState({ status: "error", erros: errosLocais });
+      return;
+    }
+
     setState({ status: "loading" });
 
-    const formData = new FormData(e.currentTarget);
-
     try {
-      const res = await fetch("/api/uploads", { method: "POST", body: formData });
+      // 1) Pede ao servidor uma assinatura de upload do Cloudinary.
+      //    O PDF NÃO passa pela nossa API — evita o 413 (limite 4,5 MB da Vercel).
+      const signRes = await fetch("/api/uploads/sign", { method: "POST" });
+      if (!signRes.ok) {
+        const err = await signRes.json().catch(() => ({}));
+        setState({
+          status: "error",
+          erros: [err.erro ?? "Não foi possível preparar o upload. Tente novamente."],
+        });
+        return;
+      }
+      const sign = await signRes.json();
+
+      // 2) Envia o PDF DIRETO ao Cloudinary com os parâmetros assinados.
+      const cloudForm = new FormData();
+      cloudForm.append("file", pdf as File);
+      cloudForm.append("api_key", sign.apiKey);
+      cloudForm.append("timestamp", String(sign.params.timestamp));
+      cloudForm.append("folder", sign.params.folder);
+      cloudForm.append("tags", sign.params.tags);
+      cloudForm.append("signature", sign.signature);
+
+      const cloudRes = await fetch(sign.uploadUrl, { method: "POST", body: cloudForm });
+      if (!cloudRes.ok) {
+        const cloudErr = await cloudRes.json().catch(() => ({}));
+        setState({
+          status: "error",
+          erros: [
+            cloudErr?.error?.message
+              ? `Falha no envio do PDF: ${cloudErr.error.message}`
+              : "Falha ao enviar o PDF para o armazenamento. Tente novamente.",
+          ],
+        });
+        return;
+      }
+      const cloudData = await cloudRes.json();
+
+      // 3) Envia apenas os METADADOS para a nossa API (corpo pequeno, sem 413).
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicUrl: cloudData.secure_url,
+          storageKey: cloudData.public_id,
+          nome,
+          telefone,
+          dataEvento,
+        }),
+      });
       const data = await res.json();
 
       if (!res.ok) {

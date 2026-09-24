@@ -83,3 +83,75 @@ export async function deletePdf(storageKey: string): Promise<void> {
   await cloudinary.uploader.destroy(storageKey, { resource_type: "raw" });
   console.log(`[Cloudinary] 🗑 Arquivo removido | public_id=${storageKey}`);
 }
+
+/* ─────────────────────────────────────────────────────────────
+ * Upload direto do navegador → Cloudinary (signed upload)
+ *
+ * Necessário porque a Vercel limita o corpo das funções a 4,5 MB.
+ * Em vez de o PDF passar pela nossa API (e estourar 413), o browser
+ * envia o arquivo direto para o Cloudinary usando uma assinatura
+ * gerada aqui no servidor — sem expor o api_secret ao cliente.
+ * ───────────────────────────────────────────────────────────── */
+
+/** Pasta padrão dos livros no Cloudinary. */
+export const CLOUDINARY_FOLDER = "livros_homenagem";
+/** Tags aplicadas a cada upload. */
+export const CLOUDINARY_TAGS = "livro_homenagem,pax_rio_verde";
+
+export interface SignedUploadParams {
+  /** URL do endpoint de upload do Cloudinary (resource_type raw). */
+  uploadUrl: string;
+  /** Assinatura HMAC dos parâmetros, gerada com o api_secret. */
+  signature: string;
+  /** Unix timestamp (segundos) usado na assinatura. */
+  timestamp: number;
+  /** API key pública do Cloudinary. */
+  apiKey: string;
+  /** Cloud name (compõe a URL de upload). */
+  cloudName: string;
+  /** Parâmetros que o cliente DEVE reenviar exatamente iguais. */
+  params: {
+    folder: string;
+    tags: string;
+    timestamp: number;
+  };
+}
+
+/**
+ * Gera os parâmetros assinados para um upload direto ao Cloudinary.
+ *
+ * O cliente usa o retorno para montar um multipart/form-data e enviar
+ * o PDF direto ao Cloudinary. A assinatura cobre apenas os parâmetros
+ * abaixo — qualquer parâmetro extra não assinado será rejeitado pelo
+ * Cloudinary, o que mantém o upload sob controle.
+ */
+export function assinarUploadDireto(): SignedUploadParams {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Credenciais do Cloudinary não configuradas no servidor.");
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  // Os parâmetros assinados precisam bater EXATAMENTE com os enviados
+  // pelo cliente (mesmos nomes e valores), senão o Cloudinary recusa.
+  const paramsToSign = {
+    folder: CLOUDINARY_FOLDER,
+    tags: CLOUDINARY_TAGS,
+    timestamp,
+  };
+
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
+
+  return {
+    uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
+    signature,
+    timestamp,
+    apiKey,
+    cloudName,
+    params: paramsToSign,
+  };
+}

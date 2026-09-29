@@ -3,6 +3,7 @@
 import { useState, useRef, FormEvent, CSSProperties } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Alert } from "@/components/ui/Alert";
+import { telefoneValido, TELEFONE_ERRO } from "@/lib/telefone";
 
 /* ── helpers de estilo reutilizáveis ──────────────────────── */
 const inputStyle: CSSProperties = {
@@ -70,6 +71,10 @@ export function UploadForm() {
       errosLocais.push("O arquivo deve ser um PDF.");
     if (pdf && pdf.size > 30 * 1024 * 1024)
       errosLocais.push("O PDF não pode ultrapassar 30 MB.");
+    if (!nome) errosLocais.push("Informe o nome do familiar.");
+    if (!telefone) errosLocais.push("Informe o telefone WhatsApp.");
+    else if (!telefoneValido(telefone)) errosLocais.push(TELEFONE_ERRO);
+    if (!dataEvento) errosLocais.push("Informe a data do evento.");
     if (errosLocais.length > 0) {
       setState({ status: "error", erros: errosLocais });
       return;
@@ -317,15 +322,16 @@ export function UploadForm() {
           type="tel"
           required
           placeholder="+5564984754321"
-          pattern="^\+[1-9]\d{7,14}$"
-          title="Use o formato E.164: +55 + DDD + número (ex: +5564984754321)"
+          pattern="^\+55(1[1-9]|[2-9][0-9])9[0-9]{8}$"
+          title="Celular BR no formato +55 + DDD + 9 + 8 dígitos (ex: +5564984754321)"
           style={{ ...inputStyle, ...getFocusStyle("telefone") }}
           onFocus={() => setFocusedField("telefone")}
           onBlur={() => setFocusedField(null)}
         />
         <p style={hintStyle}>
-          Formato E.164: código do país + DDD + número — ex:{" "}
-          <code style={{ fontFamily: "monospace", fontSize: 12 }}>+5564984754321</code>
+          Celular com DDD e o <strong style={{ color: "var(--brand-600)" }}>9</strong> — ex:{" "}
+          <code style={{ fontFamily: "monospace", fontSize: 12 }}>+5564984754321</code>{" "}
+          (+55 · DDD · 9 · 8 dígitos)
         </p>
       </div>
 

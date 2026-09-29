@@ -17,6 +17,7 @@ enum StatusEnvio {
   REENVIANDO
   ENVIADO
   FALHA
+  CANCELADO
 }
 
 model ScheduledMessage {

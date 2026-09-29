@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Filtro de status ──────────────────────────────────────────────────
-    const statusValidos: StatusEnvio[] = ["PENDENTE", "REENVIANDO", "ENVIADO", "FALHA"];
+    const statusValidos: StatusEnvio[] = ["PENDENTE", "REENVIANDO", "ENVIADO", "FALHA", "CANCELADO"];
     if (statusParam && !statusValidos.includes(statusParam)) {
       return NextResponse.json(
         { erro: `Status inválido. Use: ${statusValidos.join(", ")}.` },

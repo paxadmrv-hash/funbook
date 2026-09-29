@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CLOUDINARY_FOLDER } from "@/services/storage";
+import { telefoneValido, TELEFONE_ERRO } from "@/lib/telefone";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,8 +59,8 @@ export async function POST(req: NextRequest) {
       erros.push("A referência do arquivo é inválida.");
     if (!nome) erros.push("O nome do familiar é obrigatório.");
     if (!telefone) erros.push("O telefone é obrigatório.");
-    if (telefone && !/^\+[1-9]\d{7,14}$/.test(telefone))
-      erros.push("O telefone deve estar no formato E.164 (ex: +5564984754321).");
+    if (telefone && !telefoneValido(telefone))
+      erros.push(TELEFONE_ERRO);
     if (!dataEventoStr) erros.push("A data do evento é obrigatória.");
     if (dataEventoStr && !/^\d{4}-\d{2}-\d{2}$/.test(dataEventoStr))
       erros.push("A data do evento deve estar no formato YYYY-MM-DD.");

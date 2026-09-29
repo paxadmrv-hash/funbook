@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# kiro crew (configuração local da ferramenta)
+/.kiro/
+
 # Prisma v8 skills (resíduo — não usado no ORM v5)
 /.claude
 /.cursor

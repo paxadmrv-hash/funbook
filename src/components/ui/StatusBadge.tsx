@@ -1,6 +1,6 @@
 "use client";
 
-export type StatusEnvio = "PENDENTE" | "REENVIANDO" | "ENVIADO" | "FALHA";
+export type StatusEnvio = "PENDENTE" | "REENVIANDO" | "ENVIADO" | "FALHA" | "CANCELADO";
 
 const CONFIG: Record<StatusEnvio, { label: string; bg: string; color: string; border: string; dot: string; pulse?: boolean }> = {
   PENDENTE: {
@@ -31,6 +31,13 @@ const CONFIG: Record<StatusEnvio, { label: string; bg: string; color: string; bo
     color:  "var(--error-text)",
     border: "var(--error-border)",
     dot:    "#c0392b",
+  },
+  CANCELADO: {
+    label: "Cancelado",
+    bg:     "var(--surface-muted, #f1f1f0)",
+    color:  "var(--text-muted)",
+    border: "var(--border-default)",
+    dot:    "#9ca3af",
   },
 };
 

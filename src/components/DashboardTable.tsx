@@ -89,6 +89,7 @@ export function DashboardTable() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [reenviando, setReenviando] = useState<Record<string, boolean>>({});
+  const [acaoEmCurso, setAcaoEmCurso] = useState<Record<string, boolean>>({});
   const [feedbackReenvio, setFeedbackReenvio] = useState<
     Record<string, { tipo: "success" | "error"; msg: string }>
   >({});
@@ -145,7 +146,54 @@ export function DashboardTable() {
     }
   }
 
-  const canReenviar = (s: StatusEnvio) => s === "FALHA" || s === "PENDENTE";
+  const canReenviar = (s: StatusEnvio) => s === "FALHA" || s === "PENDENTE" || s === "CANCELADO";
+  const canCancelar = (s: StatusEnvio) => s === "PENDENTE" || s === "FALHA" || s === "REENVIANDO";
+
+  async function handleCancelar(id: string, nome: string) {
+    if (!window.confirm(`Cancelar o envio agendado para "${nome}"?\n\nO registro continua na lista, mas o WhatsApp não será enviado. Você pode reativá-lo depois clicando em "Reenviar".`)) {
+      return;
+    }
+    setAcaoEmCurso((p) => ({ ...p, [id]: true }));
+    setFeedbackReenvio((p) => { const n = { ...p }; delete n[id]; return n; });
+    try {
+      const res = await fetch(`/api/cancelar/${id}`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedbackReenvio((p) => ({ ...p, [id]: { tipo: "error", msg: data.erro ?? "Falha ao cancelar." } }));
+      } else {
+        setRegistros((p) =>
+          p.map((r) => r.id === id ? { ...r, statusEnvio: "CANCELADO" as StatusEnvio, ultimoErro: null } : r)
+        );
+        setFeedbackReenvio((p) => ({ ...p, [id]: { tipo: "success", msg: "Envio cancelado." } }));
+      }
+    } catch {
+      setFeedbackReenvio((p) => ({ ...p, [id]: { tipo: "error", msg: "Erro de comunicação com o servidor." } }));
+    } finally {
+      setAcaoEmCurso((p) => ({ ...p, [id]: false }));
+    }
+  }
+
+  async function handleExcluir(id: string, nome: string) {
+    if (!window.confirm(`Excluir permanentemente o registro de "${nome}"?\n\nEsta ação NÃO pode ser desfeita — o agendamento e o PDF serão removidos de vez.`)) {
+      return;
+    }
+    setAcaoEmCurso((p) => ({ ...p, [id]: true }));
+    setFeedbackReenvio((p) => { const n = { ...p }; delete n[id]; return n; });
+    try {
+      const res = await fetch(`/api/registros/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedbackReenvio((p) => ({ ...p, [id]: { tipo: "error", msg: data.erro ?? "Falha ao excluir." } }));
+        setAcaoEmCurso((p) => ({ ...p, [id]: false }));
+      } else {
+        // Some da lista imediatamente
+        setRegistros((p) => p.filter((r) => r.id !== id));
+      }
+    } catch {
+      setFeedbackReenvio((p) => ({ ...p, [id]: { tipo: "error", msg: "Erro de comunicação com o servidor." } }));
+      setAcaoEmCurso((p) => ({ ...p, [id]: false }));
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -193,6 +241,7 @@ export function DashboardTable() {
             <option value="REENVIANDO">Reenviando</option>
             <option value="ENVIADO">Enviado</option>
             <option value="FALHA">Falha</option>
+            <option value="CANCELADO">Cancelado</option>
           </select>
         </div>
 
@@ -360,42 +409,106 @@ export function DashboardTable() {
 
                   {/* Ações */}
                   <td style={tdStyle}>
-                    {canReenviar(r.statusEnvio) ? (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      {canReenviar(r.statusEnvio) && (
+                        <button
+                          onClick={() => handleReenviar(r.id)}
+                          disabled={reenviando[r.id] || acaoEmCurso[r.id]}
+                          aria-label={`Reenviar mensagem para ${r.nomeFamiliar}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            padding: "5px 12px", borderRadius: "var(--radius-md)",
+                            border: "1px solid var(--border-default)",
+                            backgroundColor: "#fff", color: "var(--text-primary)",
+                            fontSize: 12, fontWeight: 600, cursor: (reenviando[r.id] || acaoEmCurso[r.id]) ? "not-allowed" : "pointer",
+                            opacity: (reenviando[r.id] || acaoEmCurso[r.id]) ? .6 : 1,
+                            transition: "background .15s, border-color .15s",
+                            fontFamily: "inherit", whiteSpace: "nowrap",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!reenviando[r.id] && !acaoEmCurso[r.id]) {
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--brand-50)";
+                              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand-300)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff";
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)";
+                          }}
+                        >
+                          {reenviando[r.id] ? <Spinner size="sm" /> : (
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                            </svg>
+                          )}
+                          {r.statusEnvio === "CANCELADO" ? "Reativar" : "Reenviar"}
+                        </button>
+                      )}
+
+                      {canCancelar(r.statusEnvio) && (
+                        <button
+                          onClick={() => handleCancelar(r.id, r.nomeFamiliar)}
+                          disabled={acaoEmCurso[r.id] || reenviando[r.id]}
+                          aria-label={`Cancelar envio de ${r.nomeFamiliar}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            padding: "5px 12px", borderRadius: "var(--radius-md)",
+                            border: "1px solid var(--border-default)",
+                            backgroundColor: "#fff", color: "var(--text-secondary)",
+                            fontSize: 12, fontWeight: 600, cursor: (acaoEmCurso[r.id] || reenviando[r.id]) ? "not-allowed" : "pointer",
+                            opacity: (acaoEmCurso[r.id] || reenviando[r.id]) ? .6 : 1,
+                            transition: "background .15s, border-color .15s",
+                            fontFamily: "inherit", whiteSpace: "nowrap",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!acaoEmCurso[r.id] && !reenviando[r.id]) {
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--warning-bg)";
+                              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--warning-border)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff";
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)";
+                          }}
+                        >
+                          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                          Cancelar
+                        </button>
+                      )}
+
+                      {/* Excluir — sempre disponível */}
                       <button
-                        onClick={() => handleReenviar(r.id)}
-                        disabled={reenviando[r.id]}
-                        aria-label={`Reenviar mensagem para ${r.nomeFamiliar}`}
+                        onClick={() => handleExcluir(r.id, r.nomeFamiliar)}
+                        disabled={acaoEmCurso[r.id] || reenviando[r.id]}
+                        aria-label={`Excluir registro de ${r.nomeFamiliar}`}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "5px 12px", borderRadius: "var(--radius-md)",
-                          border: "1px solid var(--border-default)",
-                          backgroundColor: "#fff", color: "var(--text-primary)",
-                          fontSize: 12, fontWeight: 600, cursor: reenviando[r.id] ? "not-allowed" : "pointer",
-                          opacity: reenviando[r.id] ? .6 : 1,
-                          transition: "background .15s, border-color .15s",
+                          border: "1px solid var(--error-border)",
+                          backgroundColor: "#fff", color: "var(--error-text)",
+                          fontSize: 12, fontWeight: 600, cursor: (acaoEmCurso[r.id] || reenviando[r.id]) ? "not-allowed" : "pointer",
+                          opacity: (acaoEmCurso[r.id] || reenviando[r.id]) ? .6 : 1,
+                          transition: "background .15s",
                           fontFamily: "inherit", whiteSpace: "nowrap",
                         }}
                         onMouseEnter={(e) => {
-                          if (!reenviando[r.id]) {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--brand-50)";
-                            (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand-300)";
-                          }
+                          if (!acaoEmCurso[r.id] && !reenviando[r.id])
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--error-bg)";
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff";
-                          (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)";
                         }}
                       >
-                        {reenviando[r.id] ? <Spinner size="sm" /> : (
+                        {acaoEmCurso[r.id] ? <Spinner size="sm" /> : (
                           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                           </svg>
                         )}
-                        Reenviar
+                        Excluir
                       </button>
-                    ) : (
-                      <span style={{ color: "var(--border-default)", fontSize: 18 }}>—</span>
-                    )}
+                    </div>
                   </td>
                 </tr>
 

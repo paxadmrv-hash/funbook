@@ -22,7 +22,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CLOUDINARY_FOLDER } from "@/services/storage";
-import { telefoneValido, TELEFONE_ERRO } from "@/lib/telefone";
+import { telefoneValido, TELEFONE_ERRO, normalizarTelefoneBR } from "@/lib/telefone";
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
     const publicUrl = typeof body.publicUrl === "string" ? body.publicUrl.trim() : "";
     const storageKey = typeof body.storageKey === "string" ? body.storageKey.trim() : "";
     const nome = typeof body.nome === "string" ? body.nome.trim() : "";
-    const telefone = typeof body.telefone === "string" ? body.telefone.trim() : "";
+    // Aceita o telefone com ou sem +55 e normaliza para E.164 (+55...).
+    const telefoneBruto = typeof body.telefone === "string" ? body.telefone.trim() : "";
+    const telefone = telefoneBruto ? normalizarTelefoneBR(telefoneBruto) : "";
     const dataEventoStr =
       typeof body.dataEvento === "string" ? body.dataEvento.trim() : "";
 
@@ -58,8 +60,8 @@ export async function POST(req: NextRequest) {
     if (storageKey && !storageKey.startsWith(`${CLOUDINARY_FOLDER}/`))
       erros.push("A referência do arquivo é inválida.");
     if (!nome) erros.push("O nome do familiar é obrigatório.");
-    if (!telefone) erros.push("O telefone é obrigatório.");
-    if (telefone && !telefoneValido(telefone))
+    if (!telefoneBruto) erros.push("O telefone é obrigatório.");
+    else if (!telefoneValido(telefone))
       erros.push(TELEFONE_ERRO);
     if (!dataEventoStr) erros.push("A data do evento é obrigatória.");
     if (dataEventoStr && !/^\d{4}-\d{2}-\d{2}$/.test(dataEventoStr))

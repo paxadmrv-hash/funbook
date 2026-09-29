@@ -3,7 +3,7 @@
 import { useState, useRef, FormEvent, CSSProperties } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Alert } from "@/components/ui/Alert";
-import { telefoneValido, TELEFONE_ERRO } from "@/lib/telefone";
+import { telefoneValido, TELEFONE_ERRO, normalizarTelefoneBR } from "@/lib/telefone";
 
 /* ── helpers de estilo reutilizáveis ──────────────────────── */
 const inputStyle: CSSProperties = {
@@ -61,7 +61,9 @@ export function UploadForm() {
 
     const pdf = formData.get("pdf") as File | null;
     const nome = (formData.get("nome") as string | null)?.trim() ?? "";
-    const telefone = (formData.get("telefone") as string | null)?.trim() ?? "";
+    // A pessoa digita só DDD+9+número; completamos o +55 automaticamente.
+    const telefoneDigitado = (formData.get("telefone") as string | null)?.trim() ?? "";
+    const telefone = telefoneDigitado ? normalizarTelefoneBR(telefoneDigitado) : "";
     const dataEvento = (formData.get("dataEvento") as string | null)?.trim() ?? "";
 
     // ── Validação no cliente (antes de qualquer requisição) ──────────────
@@ -72,8 +74,9 @@ export function UploadForm() {
     if (pdf && pdf.size > 30 * 1024 * 1024)
       errosLocais.push("O PDF não pode ultrapassar 30 MB.");
     if (!nome) errosLocais.push("Informe o nome do familiar.");
-    if (!telefone) errosLocais.push("Informe o telefone WhatsApp.");
-    else if (!telefoneValido(telefone)) errosLocais.push(TELEFONE_ERRO);
+    if (!telefoneDigitado) errosLocais.push("Informe o telefone WhatsApp.");
+    else if (!telefoneValido(telefone))
+      errosLocais.push("Telefone inválido. Digite DDD + 9 + número (11 dígitos), ex: 64984754321.");
     if (!dataEvento) errosLocais.push("Informe a data do evento.");
     if (errosLocais.length > 0) {
       setState({ status: "error", erros: errosLocais });
@@ -316,22 +319,65 @@ export function UploadForm() {
           Telefone WhatsApp{" "}
           <span style={{ color: "var(--error-text)" }} aria-hidden="true">*</span>
         </label>
-        <input
-          id="telefone"
-          name="telefone"
-          type="tel"
-          required
-          placeholder="+5564984754321"
-          pattern="^\+55(1[1-9]|[2-9][0-9])9[0-9]{8}$"
-          title="Celular BR no formato +55 + DDD + 9 + 8 dígitos (ex: +5564984754321)"
-          style={{ ...inputStyle, ...getFocusStyle("telefone") }}
-          onFocus={() => setFocusedField("telefone")}
-          onBlur={() => setFocusedField(null)}
-        />
+
+        {/* Caixa com o +55 fixo à esquerda — a pessoa digita só DDD + 9 + número */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "stretch",
+            borderWidth: 1,
+            borderStyle: "solid",
+            borderColor: "var(--border-default)",
+            borderRadius: "var(--radius-md)",
+            overflow: "hidden",
+            backgroundColor: "#fff",
+            ...getFocusStyle("telefone"),
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "10px 12px",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--text-secondary)",
+              backgroundColor: "var(--brand-50)",
+              borderRight: "1px solid var(--border-default)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🇧🇷 +55
+          </span>
+          <input
+            id="telefone"
+            name="telefone"
+            type="tel"
+            inputMode="numeric"
+            required
+            maxLength={16}
+            placeholder="64 98475-4321"
+            pattern="^\(?(1[1-9]|[2-9][0-9])\)?\s?9\s?[0-9]{4}[-\s]?[0-9]{4}$"
+            title="Digite DDD + 9 + número (11 dígitos), ex: 64984754321"
+            style={{
+              flex: 1,
+              border: "none",
+              padding: "10px 14px",
+              fontSize: 14,
+              color: "var(--text-primary)",
+              backgroundColor: "transparent",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
+            onFocus={() => setFocusedField("telefone")}
+            onBlur={() => setFocusedField(null)}
+          />
+        </div>
         <p style={hintStyle}>
-          Celular com DDD e o <strong style={{ color: "var(--brand-600)" }}>9</strong> — ex:{" "}
-          <code style={{ fontFamily: "monospace", fontSize: 12 }}>+5564984754321</code>{" "}
-          (+55 · DDD · 9 · 8 dígitos)
+          Digite <strong style={{ color: "var(--brand-600)" }}>DDD + 9 + número</strong> — ex:{" "}
+          <code style={{ fontFamily: "monospace", fontSize: 12 }}>64984754321</code>.
+          O <code style={{ fontFamily: "monospace", fontSize: 12 }}>+55</code> é adicionado automaticamente.
         </p>
       </div>
 

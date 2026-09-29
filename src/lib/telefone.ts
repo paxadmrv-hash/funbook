@@ -25,3 +25,27 @@ export const TELEFONE_ERRO =
 export function telefoneValido(telefone: string): boolean {
   return TELEFONE_BR_REGEX.test(telefone.trim());
 }
+
+/**
+ * Normaliza um telefone digitado pelo usuário para o formato E.164 (+55...).
+ *
+ * O usuário digita apenas DDD + 9 + número (ex: "64984754321" ou
+ * "(64) 98475-4321"). Esta função remove tudo que não for dígito e
+ * garante o prefixo +55 na frente, aceitando também entradas que já
+ * venham com "55" ou "+55" (não duplica).
+ *
+ * Exemplos:
+ *   "64984754321"      -> "+5564984754321"
+ *   "(64) 98475-4321"  -> "+5564984754321"
+ *   "5564984754321"    -> "+5564984754321"
+ *   "+5564984754321"   -> "+5564984754321"
+ */
+export function normalizarTelefoneBR(bruto: string): string {
+  let digitos = (bruto ?? "").replace(/\D/g, "");
+  // Remove um "55" inicial se o restante já tiver 11 dígitos (DDD+9+número),
+  // para não duplicar o código do país.
+  if (digitos.length === 13 && digitos.startsWith("55")) {
+    digitos = digitos.slice(2);
+  }
+  return "+55" + digitos;
+}

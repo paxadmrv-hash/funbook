@@ -7,11 +7,15 @@
  *   - Forçar reprocessamento de pendentes
  *   - Produção: chamado pelo Vercel Cron Jobs diariamente
  *
- * Proteção: requer o header Authorization: Bearer <CRON_SECRET>
+ * Proteção: requer o header Authorization: Bearer <CRON_SECRET>.
+ *   (NÃO aceita mais a senha via ?secret= na URL — isso vazava no histórico.)
  *
- * Para testar localmente sem autenticação, acesse:
+ * O atalho de teste ?force=true (que ignora a data de envio e processa
+ * QUALQUER pendente) só funciona em DESENVOLVIMENTO. Em produção ele é
+ * ignorado: o endpoint sempre envia apenas o que tem data_envio = hoje.
+ *
+ * Para testar localmente:
  *   GET http://localhost:3000/api/cron/dispatch?force=true
- *   (force=true bypassa a checagem de data — processa QUALQUER pendente)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -27,20 +31,21 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.get("authorization");
 
-  // Aceita o secret via header Authorization OU via query ?secret= (facilita teste no browser)
-  const secretQuery = req.nextUrl.searchParams.get("secret");
-  const force       = req.nextUrl.searchParams.get("force") === "true";
+  // A senha só é aceita pelo header Authorization (nunca pela URL, que
+  // vazaria no histórico do navegador e nos logs).
+  // O atalho ?force=true só vale em desenvolvimento — em produção é ignorado.
+  const forcePedido = req.nextUrl.searchParams.get("force") === "true";
+  const force       = forcePedido && isDev;
 
   const autorizado =
     (secret && auth === `Bearer ${secret}`) ||
-    (secret && secretQuery === secret) ||
     isDev;
 
   if (!autorizado) {
     return NextResponse.json(
       {
         erro: "Não autorizado.",
-        dica: "Use header 'Authorization: Bearer <CRON_SECRET>' ou o parâmetro ?secret=<CRON_SECRET>",
+        dica: "Use o header 'Authorization: Bearer <CRON_SECRET>'.",
       },
       { status: 401 }
     );
@@ -51,7 +56,8 @@ export async function GET(req: NextRequest) {
 
   try {
     // ── Busca registros pendentes ────────────────────────────
-    // Com ?force=true ignora a data — útil para testes
+    // force só é true em desenvolvimento (ignora a data — útil para testes).
+    // Em produção sempre cai no filtro por data_envio = hoje.
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 

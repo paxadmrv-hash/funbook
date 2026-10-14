@@ -297,7 +297,7 @@ export function UploadForm() {
       {/* ── Nome do Familiar ──────────────────────────────────── */}
       <div>
         <label htmlFor="nome" style={labelStyle}>
-          Nome do Familiar{" "}
+          Nome do Falecido{" "}
           <span style={{ color: "var(--error-text)" }} aria-hidden="true">*</span>
         </label>
         <input

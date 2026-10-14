@@ -14,6 +14,9 @@ interface Registro {
   dataEvento: string;
   dataEnvio: string;
   statusEnvio: StatusEnvio;
+  statusLembrete: StatusEnvio;
+  ultimoErroLembrete: string | null;
+  zenviaLembreteId: string | null;
   tentativas: number;
   ultimoErro: string | null;
   zenviaId: string | null;
@@ -306,10 +309,10 @@ export function DashboardTable() {
         backgroundColor: "#fff",
         boxShadow: "var(--shadow-card)",
       }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
           <thead>
             <tr>
-              {["Familiar", "Telefone", "Data Evento", "Data Envio", "Status", "Tent.", "PDF", "Ações"].map((col) => (
+              {["Familiar", "Telefone", "Data Evento", "Data Envio", "Status Livro", "Pesquisa", "Tent.", "PDF", "Ações"].map((col) => (
                 <th key={col} style={thStyle}>{col}</th>
               ))}
             </tr>
@@ -319,7 +322,7 @@ export function DashboardTable() {
             {/* Loading state */}
             {carregando && registros.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "56px 16px" }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "56px 16px" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "var(--text-muted)" }}>
                     <Spinner size="lg" />
                     <span>Carregando registros…</span>
@@ -331,7 +334,7 @@ export function DashboardTable() {
             {/* Empty state */}
             {!carregando && registros.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "56px 16px", color: "var(--text-muted)" }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "56px 16px", color: "var(--text-muted)" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                     <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="var(--brand-200)" strokeWidth={1.5} aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
@@ -378,6 +381,22 @@ export function DashboardTable() {
                   {/* Status */}
                   <td style={tdStyle}>
                     <StatusBadge status={r.statusEnvio} />
+                  </td>
+
+                  {/* Status da pesquisa */}
+                  <td
+                    style={tdStyle}
+                    title={
+                      r.ultimoErroLembrete ??
+                      (r.zenviaLembreteId ? `ID Zenvia: ${r.zenviaLembreteId}` : undefined)
+                    }
+                  >
+                    <StatusBadge status={r.statusLembrete} />
+                    {r.statusLembrete === "FALHA" && r.ultimoErroLembrete && (
+                      <p style={{ marginTop: 4, maxWidth: 180, color: "var(--error-text)", fontSize: 11 }}>
+                        {r.ultimoErroLembrete}
+                      </p>
+                    )}
                   </td>
 
                   {/* Tentativas */}
@@ -515,7 +534,7 @@ export function DashboardTable() {
                 {/* Linha de detalhe do erro */}
                 {r.ultimoErro && (
                   <tr key={`${r.id}-err`} style={{ backgroundColor: "var(--error-bg)" }}>
-                    <td colSpan={8} style={{
+                    <td colSpan={9} style={{
                       padding: "8px 16px", fontSize: 12,
                       color: "var(--error-text)",
                       borderBottom: "1px solid var(--error-border)",
@@ -528,7 +547,7 @@ export function DashboardTable() {
                 {/* Feedback inline de reenvio */}
                 {feedbackReenvio[r.id] && (
                   <tr key={`${r.id}-fb`}>
-                    <td colSpan={8} style={{
+                    <td colSpan={9} style={{
                       padding: "8px 16px", fontSize: 12, fontWeight: 600,
                       backgroundColor: feedbackReenvio[r.id].tipo === "success"
                         ? "var(--success-bg)" : "var(--error-bg)",

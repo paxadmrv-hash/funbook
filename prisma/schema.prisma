@@ -32,11 +32,16 @@ model ScheduledMessage {
   tentativas   Int         @default(0)
   ultimoErro   String?     @map("ultimo_erro")   // mensagem de erro da última tentativa
   zenviaId     String?     @map("zenvia_msg_id") @db.VarChar(100) // ID retornado pela Zenvia
+  statusLembrete StatusEnvio @default(PENDENTE) @map("status_lembrete")
+  tentativasLembrete Int    @default(0)         @map("tentativas_lembrete")
+  ultimoErroLembrete String? @map("ultimo_erro_lembrete")
+  zenviaLembreteId String?   @map("zenvia_lembrete_id") @db.VarChar(100)
   criadoEm     DateTime    @default(now())       @map("criado_em")
   atualizadoEm DateTime    @updatedAt            @map("atualizado_em")
 
   // Índice composto para a query diária do cron job
   @@index([dataEnvio, statusEnvio], name: "idx_data_envio_status")
+  @@index([dataEnvio, statusLembrete], name: "idx_data_envio_lembrete_status")
   // Índice para o dashboard (ordenação por data de criação)
   @@index([criadoEm(sort: Desc)], name: "idx_criado_em")
 

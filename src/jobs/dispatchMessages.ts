@@ -13,6 +13,7 @@ import cron from "node-cron";
 import { prisma } from "@/lib/prisma";
 import { comRetry } from "@/lib/retry";
 import { sendWhatsAppTemplate } from "@/services/zenvia";
+import { dispatchFollowupMessages } from "@/services/dispatchFollowup";
 import type { ScheduledMessage } from "@prisma/client";
 
 const MAX_TENTATIVAS = 3;
@@ -43,6 +44,7 @@ export async function executarDisparo(): Promise<{
   total: number;
   enviados: number;
   falhas: number;
+  acompanhamento: { total: number; enviados: number; falhas: number };
 }> {
   const hoje = new Date();
   // Zera hora/min/seg para comparar apenas a data
@@ -62,7 +64,12 @@ export async function executarDisparo(): Promise<{
   console.log(`[CronJob] 📋 ${registros.length} mensagem(ns) para processar.`);
 
   if (registros.length === 0) {
-    return { total: 0, enviados: 0, falhas: 0 };
+    return {
+      total: 0,
+      enviados: 0,
+      falhas: 0,
+      acompanhamento: await dispatchFollowupMessages(),
+    };
   }
 
   let enviados = 0;
@@ -83,7 +90,12 @@ export async function executarDisparo(): Promise<{
     `[CronJob] ✅ Concluído | total=${registros.length} | enviados=${enviados} | falhas=${falhas}`
   );
 
-  return { total: registros.length, enviados, falhas };
+  return {
+    total: registros.length,
+    enviados,
+    falhas,
+    acompanhamento: await dispatchFollowupMessages(),
+  };
 }
 
 async function processarRegistro(registro: ScheduledMessage): Promise<void> {

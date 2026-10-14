@@ -33,6 +33,8 @@ export interface SendTemplateResult {
   zenviaId: string;
 }
 
+const FOLLOWUP_TEMPLATE_ID = "14bd8e01-3c15-4828-a890-5997e95dcf2b";
+
 /**
  * Envia o Livro de Homenagem via template WhatsApp aprovado na Zenvia.
  * Lança erro com mensagem descritiva em caso de falha.
@@ -70,6 +72,36 @@ export async function sendWhatsAppTemplate(
 
   console.log(`[Zenvia] Enviando payload: ${JSON.stringify(payload)}`);
 
+  return enviarPayload(payload, to);
+}
+
+/**
+ * Envia o template de acompanhamento, que não possui campos variáveis.
+ */
+export async function sendWhatsAppFollowupTemplate(
+  telefone: string
+): Promise<SendTemplateResult> {
+  const to = telefone.replace(/^\+/, "");
+  const payload = {
+    from: process.env.ZENVIA_FROM,
+    to,
+    contents: [
+      {
+        type: "template",
+        templateId: FOLLOWUP_TEMPLATE_ID,
+      },
+    ],
+  };
+
+  console.log(`[Zenvia] Enviando payload: ${JSON.stringify(payload)}`);
+  return enviarPayload(payload, to, true);
+}
+
+async function enviarPayload(
+  payload: object,
+  to: string,
+  requireResponseId = false
+): Promise<SendTemplateResult> {
   try {
     const response = await axios.post(ZENVIA_BASE_URL, payload, {
       headers: {
@@ -79,7 +111,14 @@ export async function sendWhatsAppTemplate(
       timeout: 15_000, // 15 segundos
     });
 
-    const zenviaId: string = response.data?.id ?? `zenvia_${Date.now()}`;
+    const responseId: unknown = response.data?.id;
+    if (requireResponseId && (typeof responseId !== "string" || !responseId)) {
+      throw new Error("[Zenvia] Resposta sem ID da mensagem enviada.");
+    }
+    const zenviaId =
+      typeof responseId === "string" && responseId
+        ? responseId
+        : `zenvia_${Date.now()}`;
 
     // Log completo da resposta para diagnóstico de entrega
     console.log(

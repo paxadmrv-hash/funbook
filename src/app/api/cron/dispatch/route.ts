@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppTemplate } from "@/services/zenvia";
 import { comRetry } from "@/lib/retry";
+import { dispatchFollowupMessages } from "@/services/dispatchFollowup";
 
 const MAX_TENTATIVAS = 3;
 
@@ -82,6 +83,7 @@ export async function GET(req: NextRequest) {
     console.log(`[CronDispatch] 📋 ${registros.length} registro(s) encontrado(s)`);
 
     if (registros.length === 0) {
+      const acompanhamento = await dispatchFollowupMessages(force);
       return NextResponse.json({
         mensagem: force
           ? "Nenhum registro PENDENTE encontrado no banco."
@@ -89,6 +91,7 @@ export async function GET(req: NextRequest) {
         total: 0,
         enviados: 0,
         falhas: 0,
+        acompanhamento,
         duracaoMs: Date.now() - inicio,
       });
     }
@@ -141,11 +144,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const acompanhamento = await dispatchFollowupMessages(force);
     const resultado = {
       mensagem:  `Processamento concluído.`,
       total:     registros.length,
       enviados,
       falhas,
+      acompanhamento,
       duracaoMs: Date.now() - inicio,
       detalhes,
     };

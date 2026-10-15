@@ -34,6 +34,7 @@ export interface SendTemplateResult {
 }
 
 const FOLLOWUP_TEMPLATE_ID = "14bd8e01-3c15-4828-a890-5997e95dcf2b";
+const FOLLOWUP_IMAGE_URL = "https://i.ibb.co/KxFFpKDY/f2e1a8dc-7e9e-4f4f-b1aa-e12b171dd9ab.jpg";
 
 /**
  * Envia o Livro de Homenagem via template WhatsApp aprovado na Zenvia.
@@ -89,6 +90,9 @@ export async function sendWhatsAppFollowupTemplate(
       {
         type: "template",
         templateId: FOLLOWUP_TEMPLATE_ID,
+        fields: {
+          imageUrl: FOLLOWUP_IMAGE_URL,
+        },
       },
     ],
   };
